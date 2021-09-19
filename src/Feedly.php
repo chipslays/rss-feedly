@@ -66,6 +66,32 @@ class Feedly
         return self::handleResponse($response);
     }
 
+    /**
+     * Agreagate multiple RSS urls and create common feed.
+     *
+     * @param array $urls Array of RSS urls
+     * @param array $filter Array of filter config
+     * @return Collection
+     */
+    public static function aggregate(array $urls, array $filter = null)
+    {
+        $items = [];
+
+        foreach ($urls as $url) {
+            if(!$rss = self::get($url)) {
+                continue;
+            }
+
+            $items = array_merge($items, $rss->items()->all());
+        }
+
+        if ($filter) {
+            return self::filter($items, $filter);
+        }
+
+        return new Collection($items);
+    }
+
     protected static function handleResponse($response)
     {
         if (!$response) {
