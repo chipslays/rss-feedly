@@ -25,7 +25,6 @@ if (!$rss = Feedly::get('https://lenta.ru/rss/news')) {
     throw new Exception("Error while getting feed content.", 1);
 }
 
-
 $items = Feedly::filter($rss, [
     // exclude content where the title or description contain the following words
     'except' => [
