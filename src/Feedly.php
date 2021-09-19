@@ -35,7 +35,7 @@ class Feedly
      * @param string $url
      * @param string $user
      * @param string $password
-     * @return RSS|bool
+     * @return RssFeed|bool
      *
      * @throws FeedlyException
      */
