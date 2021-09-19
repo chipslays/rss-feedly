@@ -31,7 +31,7 @@ $items = Feedly::filter($rss, [
     'priority' => [
 
         // high priority
-        'high' => [['bitcoin', 'rate'], 'google', ''],
+        'high' => [['bitcoin', 'rate'], 'google'],
 
         // medium priority
         'medium' => ['telegram', 'durov'],
