@@ -104,7 +104,7 @@ class Feedly
             return self::handleRssResponse($xml);
         }
 
-        // @todo: add Atom supports?
+        // @todo: add other supports?
 
         throw new FeedlyException('Unknown RSS format while handle response.', 1);
     }
@@ -115,24 +115,6 @@ class Feedly
      */
     protected static function handleRssResponse(SimpleXMLElement $xml)
     {
-        // self::adjustNamespaces($xml);
-
-        // foreach ($xml->channel->item as $item) {
-        //     self::adjustNamespaces($item);
-
-        //     $item->url = (string) $item->link;
-        //     if (isset($item->{'dc:date'})) {
-        //         $item->timestamp = strtotime($item->{'dc:date'});
-        //     } elseif (isset($item->pubDate)) {
-        //         $item->timestamp = strtotime($item->pubDate);
-        //     }
-
-        //     $item->image = null;
-        //     if (isset($item->enclosure)) {
-        //         $item->image = $item->enclosure['url'];
-        //     }
-        // }
-
         return new RssFeed($xml);
     }
 
@@ -145,7 +127,6 @@ class Feedly
         self::$curl = self::$curl ?: curl_init();
 
         curl_setopt(self::$curl, CURLOPT_URL, $url);
-
         curl_setopt(self::$curl, CURLOPT_USERAGENT, self::config('useragent'));
         curl_setopt(self::$curl, CURLOPT_HEADER, false);
         curl_setopt(self::$curl, CURLOPT_TIMEOUT, 20);
@@ -170,20 +151,6 @@ class Feedly
     public static function setOpt(int $option, mixed $value)
     {
         curl_setopt(self::$curl, $option, $value);
-    }
-
-    /**
-     * @param  SimpleXMLElement $el
-     * @return void
-     */
-    private static function adjustNamespaces($el)
-    {
-        foreach ($el->getNamespaces(true) as $prefix => $ns) {
-            $children = $el->children($ns);
-            foreach ($children as $tag => $content) {
-                $el->{$prefix . ':' . $tag} = $content;
-            }
-        }
     }
 
     /**
