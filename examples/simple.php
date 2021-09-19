@@ -17,3 +17,8 @@ if (!$rss = Feedly::get('https://lenta.ru/rss/news')) {
 foreach ($rss->items()->all() as $index => $item) {
     print_r("#{$index}. {$item['title']}: {$item['description']}" . PHP_EOL);
 }
+
+// or
+$rss->items()->each(function ($item, $index) {
+    print_r("#{$index}. {$item['title']}: {$item['description']}" . PHP_EOL);
+});
