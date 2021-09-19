@@ -17,7 +17,7 @@ require __DIR__ . '/../vendor/autoload.php';
 
 Feedly::config([
     'useragent' => 'FeedFetcher-Google',
-    'cache.dir' => __DIR__ . '/storage/cache',
+    'cache.dir' => __DIR__ . '/storage/cache', // null - for disable cache
     'cache.expire' => '+30 minutes',
 ]);
 
