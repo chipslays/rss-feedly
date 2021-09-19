@@ -67,7 +67,7 @@ class Feedly
     }
 
     /**
-     * Agreagate multiple RSS urls and create common feed.
+     * Aggreagate multiple RSS urls and create common feed.
      *
      * @param array $urls Array of RSS urls
      * @param array $filter Array of filter config
