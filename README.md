@@ -1,4 +1,4 @@
-# Feedly
+# 📢 Feedly
 
 Simple RSS feed reader for PHP.
 
