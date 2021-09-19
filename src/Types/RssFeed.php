@@ -49,9 +49,9 @@ class RssFeed
                 $modifyItem['image'] = null;
             } else {
                 $modifyItem['image'] = [
-                    'url' => $item->enclosure['@attributes']['url'],
-                    'type' => $item->enclosure['@attributes']['type'],
-                    'length' => $item->enclosure['@attributes']['length'],
+                    'url' => $item->enclosure['@attributes']['url'] ?? null,
+                    'type' => $item->enclosure['@attributes']['type'] ?? null,
+                    'length' => $item->enclosure['@attributes']['length'] ?? null,
                 ];
             }
 
