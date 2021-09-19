@@ -2,6 +2,8 @@
 
 Simple RSS feed reader for PHP.
 
+> WIP but workable version.
+
 ## Installation
 
 ```bash
