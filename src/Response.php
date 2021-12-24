@@ -9,6 +9,13 @@ use Chipslays\Collection\Collection;
  */
 class Response extends Collection
 {
+    /**
+     * Except posts.
+     *
+     * @param array $excepts
+     * @param array $in
+     * @return static
+     */
     public function except(array $excepts, array $in = ['title', 'description'])
     {
         $filteredItems = [];
@@ -27,7 +34,12 @@ class Response extends Collection
         return new static($filteredItems);
     }
 
-    // int $priority, array $values, array $in = ['title', 'description']
+    /**
+     * Set priority for posts.
+     *
+     * @param array $priorites
+     * @return static
+     */
     public function priority(array $priorites)
     {
         $filteredItems = [];
@@ -53,6 +65,12 @@ class Response extends Collection
         return new static($filteredItems);
     }
 
+    /**
+     * @param array $item
+     * @param string $key
+     * @param string|array $pattern
+     * @return bool
+     */
     protected function itemContain($item, $key, $pattern)
     {
         $searchString = $item[$key];

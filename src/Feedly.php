@@ -29,6 +29,8 @@ class Feedly
     }
 
     /**
+     * Get RSS feed.
+     *
      * @param string $url
      * @return bool|Response
      */
@@ -82,6 +84,10 @@ class Feedly
         return new Response($items);
     }
 
+    /**
+     * @param string|bool $rawResponse
+     * @return Response|bool
+     */
     protected function handleResponse($rawResponse)
     {
         if (!$rawResponse) {
@@ -148,6 +154,8 @@ class Feedly
     }
 
     /**
+     * Get value from config.
+     *
      * @param string $key
      * @param mixed $value
      * @return mixed
