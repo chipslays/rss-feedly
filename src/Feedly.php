@@ -2,50 +2,43 @@
 
 namespace Feedly;
 
-use Feedly\Types\RssFeed;
-use Feedly\Exceptions\FeedlyException;
 use Chipslays\Collection\Collection;
 use SimpleXMLElement;
 
 class Feedly
 {
-    protected static $curl;
+    private ?Collection $config = null;
+
+    protected $curl;
 
     protected const CACHE_FILENAME = '%s/feedly.%s.xml';
 
-    protected const DEFAULT_CACHE_EXPIRE_TIME = '+30 minutes';
+    public const DEFAULT_CACHE_EXPIRE_TIME = '+6 hours';
 
-    /**
-     * @var Collection
-     */
-    protected static $config = [
+    public const DEFAULT_PRIORITY = 500;
+
+    private array $defaultConfig = [
         'useragent' => 'FeedFetcher-Google',
-        'cache' => [
-            'dir' => null,
-            'expire' => self::DEFAULT_CACHE_EXPIRE_TIME, // timestamp|string
-        ],
+        'cacheDir' => false,
+        'cacheTtl' => self::DEFAULT_CACHE_EXPIRE_TIME,
     ];
 
     public function __construct(array $config = [])
     {
-        $this->config($config);
+        $this->config = new Collection(array_merge($this->defaultConfig, $config));
     }
 
     /**
      * @param string $url
-     * @param string $user
-     * @param string $password
-     * @return RssFeed|bool
-     *
-     * @throws FeedlyException
+     * @return bool|Response
      */
-    public static function get(string $url, $user = null, $password = null)
+    public function get(string $url)
     {
-        $cacheDir = rtrim(self::config('cache.dir'), '/\\');
+        $cacheDir = rtrim($this->config('cacheDir'), '/\\');
         $cacheFile = sprintf(self::CACHE_FILENAME, (string) $cacheDir, md5(serialize(func_get_args())));
 
         if ($cacheDir && file_exists($cacheFile)) {
-            $cacheExpire = self::config('cache.expire', self::DEFAULT_CACHE_EXPIRE_TIME);
+            $cacheExpire = $this->config('cacheTtl', self::DEFAULT_CACHE_EXPIRE_TIME);
             if (
                 time() - @filemtime($cacheFile) <=
                 (is_string($cacheExpire)
@@ -53,239 +46,114 @@ class Feedly
                     : $cacheExpire)
                 && $response = @file_get_contents($cacheFile)
             ) {
-                return self::handleResponse($response);
+                return $this->handleResponse($response);
             }
         }
 
-        $response = self::request($url, $user, $password);
+        $response = $this->request($url);
 
         if ($cacheDir) {
             file_put_contents($cacheFile, $response);
         }
 
-        return self::handleResponse($response);
+        return $this->handleResponse($response);
     }
 
     /**
      * Aggreagate multiple RSS urls and create common feed.
      *
      * @param array $urls Array of RSS urls
-     * @param array $filter Array of filter config
-     * @return Collection
+     * @return Response
      */
-    public static function aggregate(array $urls, array $filter = null)
+    public function aggregate(array $urls)
     {
         $items = [];
-
         foreach ($urls as $url) {
-            if(!$rss = self::get($url)) {
+            if (!$rss = $this->get($url)) {
                 continue;
             }
-
-            $items = array_merge($items, $rss->items()->all());
+            $items = array_merge($items, $rss->posts->all());
         }
 
-        if ($filter) {
-            return self::filter($items, $filter);
-        }
+        usort($items, function ($a, $b) {
+            return $a['date'] <=> $b['date'];
+        });
 
-        return new Collection($items);
+        return new Response($items);
     }
 
-    protected static function handleResponse($response)
+    protected function handleResponse($rawResponse)
     {
-        if (!$response) {
+        if (!$rawResponse) {
             return false;
         }
 
-        $xml = new SimpleXMLElement($response, LIBXML_NOWARNING | LIBXML_NOERROR | LIBXML_NOCDATA);
+        $xml = new SimpleXMLElement($rawResponse, LIBXML_NOWARNING | LIBXML_NOERROR | LIBXML_NOCDATA);
 
-        if ($xml->channel) {
-            return self::handleRssResponse($xml);
+        $response = json_decode(json_encode($xml), true)['channel'] ?? [];
+
+        $items = [];
+        foreach ($response['item'] ?? [] as $item) {
+            $item = (object) $item;
+            $newItem['title'] = $item->title ? trim($item->title) : null;
+            $newItem['description'] = $item->description ? trim($item->description) : null;
+            $newItem['date'] = $item->pubDate ? @strtotime(trim($item->pubDate)) : null;
+            $newItem['url'] = $item->link ? trim($item->link) : null;
+            $newItem['category'] = $item->category ? trim($item->category) : null;
+            $newItem['author'] = $item->author ? trim($item->author) : null;
+            $newItem['guid'] = $item->guid ? trim($item->guid) : null;
+            $newItem['comments'] = $item->comments ? trim($item->comments) : null;
+            $newItem['source'] = $item->source ? trim($item->source) : null;
+
+            if (!$item->enclosure) {
+                $newItem['image'] = null;
+            } else {
+                $newItem['image'] = [
+                    'url' => $item->enclosure['@attributes']['url'] ?? null,
+                    'type' => $item->enclosure['@attributes']['type'] ?? null,
+                    'length' => $item->enclosure['@attributes']['length'] ?? null,
+                ];
+            }
+
+            $items[] = $newItem;
         }
 
-        // @todo: add other supports?
+        $response['posts'] = new Response($items);
+        unset($response['item']);
 
-        throw new FeedlyException('Unknown RSS format while handle response.', 1);
-    }
-
-    /**
-     * @param SimpleXMLElement $xml
-     * @return void
-     */
-    protected static function handleRssResponse(SimpleXMLElement $xml)
-    {
-        return new RssFeed($xml);
+        return new Response($response);
     }
 
     /**
      * @param string $url
      * @return string|bool
      */
-    public static function request(string $url)
+    protected function request(string $url)
     {
-        self::$curl = self::$curl ?: curl_init();
+        $this->curl = $this->curl ?: curl_init();
 
-        curl_setopt(self::$curl, CURLOPT_URL, $url);
-        curl_setopt(self::$curl, CURLOPT_USERAGENT, self::config('useragent'));
-        curl_setopt(self::$curl, CURLOPT_HEADER, false);
-        curl_setopt(self::$curl, CURLOPT_TIMEOUT, 20);
-        curl_setopt(self::$curl, CURLOPT_ENCODING, '');
-        curl_setopt(self::$curl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt(self::$curl, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($this->curl, CURLOPT_URL, $url);
+        curl_setopt($this->curl, CURLOPT_USERAGENT, $this->config('useragent'));
+        curl_setopt($this->curl, CURLOPT_HEADER, false);
+        curl_setopt($this->curl, CURLOPT_TIMEOUT, 30);
+        curl_setopt($this->curl, CURLOPT_ENCODING, '');
+        curl_setopt($this->curl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($this->curl, CURLOPT_FOLLOWLOCATION, true);
 
-        $result = curl_exec(self::$curl);
+        $result = curl_exec($this->curl);
 
-        return curl_errno(self::$curl) === 0 && curl_getinfo(self::$curl, CURLINFO_HTTP_CODE) === 200
+        return  curl_errno($this->curl) === 0 && curl_getinfo($this->curl, CURLINFO_HTTP_CODE) === 200
             ? $result
             : false;
     }
 
     /**
-     * Set CURL option.
-     *
-     * @param integer $option
-     * @param mixed $value
-     * @return void
-     */
-    public static function setOpt(int $option, mixed $value)
-    {
-        curl_setopt(self::$curl, $option, $value);
-    }
-
-    /**
-     * @param string|array $key Array of key & value for set, String for getting value by key name.
+     * @param string $key
      * @param mixed $value
      * @return mixed
      */
-    public static function config($key, $default = null)
+    public function config($key, $default = null)
     {
-        if (is_array(self::$config)) {
-            self::$config = new Collection(self::$config);
-        }
-
-        if (!is_array($key)) {
-            return self::$config->get($key, $default);
-        }
-
-        foreach ($arr = $key as $key => $value) {
-            self::$config->set($key, $value);
-        }
-    }
-
-    /**
-     * Filter RSS items.
-     *
-     * @param array|RssFeed $items
-     * @param array $filter
-     * @return Collection Collection of items
-     */
-    public static function filter($items, array $filter = [])
-    {
-        $filter = array_replace_recursive([
-            'except' => [],
-            'priority' => [
-                'high' => [],
-                'medium' => [],
-                'low' => [],
-            ],
-        ], $filter);
-
-        $items = is_array($items) ? $items : $items->items()->all();
-
-        $filtered = [];
-        foreach ($items as $item) {
-            // check except item
-            foreach ($filter['except'] as $pattern) {
-                if (self::itemContain($item, $pattern)) {
-                    continue 2;
-                }
-            }
-
-            $filtered[] = $item;
-        }
-
-        $highPriority = [];
-        $mediumPriority = [];
-        $lowPriority = [];
-        $noPriority = [];
-
-        foreach ($filtered as $item) {
-            foreach ($filter['priority']['high'] as $pattern) {
-                if (self::itemContain($item, $pattern)) {
-                    $highPriority[] = $item;
-                    continue 2;
-                }
-            }
-
-            foreach ($filter['priority']['medium'] as $pattern) {
-                if (self::itemContain($item, $pattern)) {
-                    $mediumPriority[] = $item;
-                    continue 2;
-                }
-            }
-
-            foreach ($filter['priority']['low'] as $pattern) {
-                if (self::itemContain($item, $pattern)) {
-                    $lowPriority[] = $item;
-                    continue 2;
-                }
-            }
-
-            $noPriority[] = $item;
-        }
-
-        $prioritized = array_merge($highPriority, $mediumPriority, $lowPriority, $noPriority);
-
-        return new Collection($prioritized);
-    }
-
-    protected static function itemContain($item, $pattern)
-    {
-        $title = trim($item['title']);
-        $description = trim($item['description']) ?? '';
-
-        $contain = function ($text, $pattern) {
-            $result = @preg_match($pattern, $text);
-            if ($result === false) {
-                if (mb_substr($pattern, -1) == '*') {
-                    if (preg_match("~{$pattern}~iu", $text)) {
-                        return true;
-                    }
-                } else {
-                    if (preg_match("~\b{$pattern}\b~iu", $text)) {
-                        return true;
-                    }
-                }
-            } elseif ($result > 0) {
-                return true;
-            }
-
-            return false;
-        };
-
-        // as array (all values should be contain in item)
-        if (is_array($pattern)) {
-            $containCount = 0;
-            foreach ($pattern as $value) {
-                if (self::itemContain($item, $value)) {
-                    $containCount++;
-                }
-            }
-            if ($containCount >= count($pattern)) {
-                return true;
-            }
-            return false;
-        } else {
-            // check in title
-            if ($contain($title, $pattern)) {
-                return true;
-            }
-            // check in description
-            if ($contain($description, $pattern)) {
-                return true;
-            }
-            return false;
-        }
+        return $this->config->get($key, $default);
     }
 }

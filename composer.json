@@ -1,8 +1,7 @@
 {
 	"name": "chipslays/rss-feedly",
-	"description": "Simple RSS feed reader for PHP.",
+	"description": "Simple RSS feed reader.",
 	"keywords": ["rss", "feed", "reader"],
-	"homepage": "https://github.com/chipslays/rss-feedly",
 	"license": "MIT",
 	"require": {
 		"ext-simplexml": "*",
@@ -10,7 +9,7 @@
 	},
 	"autoload": {
 		"psr-4": {
-            "Feedly\\": "src/"
-        }
+			"Feedly\\": "src/"
+		}
 	}
 }

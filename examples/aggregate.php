@@ -4,22 +4,17 @@ use Feedly\Feedly;
 
 require __DIR__ . '/../vendor/autoload.php';
 
-Feedly::config([
+$rss = new Feedly([
     'useragent' => 'FeedFetcher-Google',
-    'cache.dir' => __DIR__ . '/storage/cache',
-    'cache.expire' => '+30 minutes',
+    'cacheDir' => __DIR__ . '/cache',
+    'cacheTtl' => '+30 minutes',
 ]);
 
-$items = Feedly::aggregate([
-    'https://lenta.ru/rss/news',
-    'https://meduza.io/rss2/all',
-], [
-    'except' => ['blm', 'politic*'],
-    'priority' => [
-        'high' => ['google', 'tech*'],
-    ],
-]);
+// sorted by date (newer first)
+$posts = $rss->aggregate(['https://lenta.ru/rss/news', 'https://meduza.io/rss2/all']);
 
-foreach ($items->all() as $index => $item) {
-    print_r("#{$index}. {$item['title']}" . PHP_EOL);
+foreach ($posts as $post) {
+    echo $post['title'] . PHP_EOL;
 }
+
+

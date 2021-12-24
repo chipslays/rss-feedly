@@ -1,6 +1,6 @@
 .vscode
 vendor
 composer.lock
-examples/storage/cache/*
-!.gitkeep
-test.php
+examples/test.php
+examples/cache/*
+!examples/cache/.gitkeep
