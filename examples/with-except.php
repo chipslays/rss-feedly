@@ -15,7 +15,8 @@ $feed = $rss->get('https://lenta.ru/rss/news');
 // default find Politics word in Title or Description
 $posts = $feed->except(['Politics']);
 
-// Pass multiple words
+// pass multiple words
+// info: if at least one word is in the text (politics or putin or trump)
 $posts = $feed->except(['Politi*', '/putin/iu', 'Trump']);
 
 // find in Category
