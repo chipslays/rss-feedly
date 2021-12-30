@@ -12,6 +12,7 @@ $rss = new Feedly([
 
 $feed = $rss->get('https://lenta.ru/rss/news');
 
+// lower number means higher priority
 $posts = $feed->priority([
     // [required:priority, required:words, required:in]
     [100, ['Google', 'Tesla', 'Durov'], ['title', 'description']],
