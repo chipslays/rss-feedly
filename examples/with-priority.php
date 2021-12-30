@@ -19,7 +19,7 @@ $posts = $feed->priority([
 
     [200, ['Design*', '/Photogr/iu'], ['title']],
 
-    // add these words to end of the list
+    // adding posts with these words to end of the list
     [Feedly::DEFAULT_PRIORITY + 1, ['Politics', 'Putin', 'Trump'], ['title', 'description']],
 ]);
 
