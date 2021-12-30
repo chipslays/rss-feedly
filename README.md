@@ -47,6 +47,10 @@ $posts = $posts->where('date', '>', strtotime('-6 hours'));
 $posts->each(function ($post) {
     echo $post['title'] . PHP_EOL;
 });
+
+foreach ($posts as $post) {
+    // ...
+}
 ```
 
 ## Examples
